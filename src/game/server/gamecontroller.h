@@ -68,6 +68,13 @@ class IGameController
 	void CycleMap();
 
 	// spawn
+	vec2 m_aaSpawnPoints[3][64];
+	int m_aNumSpawnPoints[3];
+
+	// team
+	int ClampTeam(int Team) const;
+
+protected:
 	struct CSpawnEval
 	{
 		CSpawnEval()
@@ -83,16 +90,10 @@ class IGameController
 		int m_FriendlyTeam;
 		float m_Score;
 	};
-	vec2 m_aaSpawnPoints[3][64];
-	int m_aNumSpawnPoints[3];
-	
+
 	float EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos) const;
 	void EvaluateSpawnType(CSpawnEval *pEval, int Type) const;
 
-	// team
-	int ClampTeam(int Team) const;
-
-protected:
 	CGameContext *GameServer() const { return m_pGameServer; }
 	IServer *Server() const { return m_pServer; }
 
@@ -161,7 +162,7 @@ public:
 	virtual bool OnEntity(int Index, vec2 Pos);
 
 	void OnPlayerConnect(class CPlayer *pPlayer);
-	void OnPlayerDisconnect(class CPlayer *pPlayer);
+	virtual void OnPlayerDisconnect(class CPlayer *pPlayer);
 	void OnPlayerInfoChange(class CPlayer *pPlayer);
 	void OnPlayerReadyChange(class CPlayer *pPlayer);
 
@@ -204,7 +205,7 @@ public:
 	void ChangeMap(const char *pToMap);
 
 	//spawn
-	bool CanSpawn(int Team, vec2 *pPos) const;
+	virtual bool CanSpawn(int Team, vec2 *pPos) const;
 	bool GetStartRespawnState() const;
 
 	// team
@@ -216,6 +217,8 @@ public:
 	
 	int GetRealPlayerNum() const { return m_aTeamSize[TEAM_RED]+m_aTeamSize[TEAM_BLUE]; }
 	int GetStartTeam();
+
+        void NextMap();
 };
 
 #endif

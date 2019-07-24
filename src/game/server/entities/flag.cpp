@@ -41,6 +41,11 @@ void CFlag::Drop()
 	m_DropTick = Server()->Tick();
 }
 
+void CFlag::Kick(vec2 Momentum) {
+	m_Vel += Momentum;
+	m_DropTick = Server()->Tick();
+}
+
 void CFlag::TickDefered()
 {
 	if(m_pCarrier)

@@ -9,7 +9,9 @@
 
 #include "character.h"
 #include "laser.h"
+
 #include "projectile.h"
+#include <game/server/gamemodes/fb.h>
 
 //input count
 struct CInputCount
@@ -37,7 +39,6 @@ CInputCount CountInput(int Prev, int Cur)
 	return c;
 }
 
-
 MACRO_ALLOC_POOL_ID_IMPL(CCharacter, MAX_CLIENTS)
 
 // Character, "physical" player's part
@@ -62,6 +63,11 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_ActiveWeapon = WEAPON_GUN;
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
+
+	m_pBall = 0;
+	m_GoalCampTick = 0;
+	m_CampTick = 0;
+	m_CampPos = Pos;
 
 	m_pPlayer = pPlayer;
 	m_Pos = Pos;
@@ -116,20 +122,13 @@ bool CCharacter::IsGrounded()
 
 void CCharacter::HandleNinja()
 {
-	if(m_ActiveWeapon != WEAPON_NINJA)
+	if(m_ActiveWeapon != WEAPON_NINJA || m_pBall)
 		return;
 
 	if ((Server()->Tick() - m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000))
 	{
 		// time's up, return
-		m_aWeapons[WEAPON_NINJA].m_Got = false;
-		m_ActiveWeapon = m_LastWeapon;
-
-		// reset velocity
-		if(m_Ninja.m_CurrentMoveTime > 0)
-			m_Core.m_Vel = m_Ninja.m_ActivationDir*m_Ninja.m_OldVelAmount;
-
-		SetWeapon(m_ActiveWeapon);
+		RevokeNinja();
 		return;
 	}
 
@@ -195,8 +194,24 @@ void CCharacter::HandleNinja()
 	}
 
 	return;
+};
+
+void CCharacter::ThrowBall(vec2 Velocity)
+{
+	m_pBall->Release(Velocity);
+	m_pBall = NULL;
+	RevokeNinja();
 }
 
+void CCharacter::DropBall()
+{
+	ThrowBall(vec2(0, 0));
+}
+
+void CCharacter::CaptureBall(CBall* ball)
+{
+	static_cast<CGameControllerFB *>(GameServer()->m_pController)->GrantBall(this, ball);
+}
 
 void CCharacter::DoWeaponSwitch()
 {
@@ -277,7 +292,7 @@ void CCharacter::FireWeapon()
 	if(!m_aWeapons[m_ActiveWeapon].m_Ammo)
 	{
 		// 125ms is a magical limit of how fast a human can click
-		m_ReloadTimer = 125 * Server()->TickSpeed() / 1000;
+		DischargeWeapon(125);
 		if(m_LastNoAmmoSound+Server()->TickSpeed() <= Server()->Tick())
 		{
 			GameServer()->CreateSound(m_Pos, SOUND_WEAPON_NOAMMO);
@@ -327,7 +342,7 @@ void CCharacter::FireWeapon()
 
 			// if we Hit anything, we have to wait for the reload
 			if(Hits)
-				m_ReloadTimer = Server()->TickSpeed()/3;
+				DischargeWeapon(320);
 
 		} break;
 
@@ -385,14 +400,26 @@ void CCharacter::FireWeapon()
 
 		case WEAPON_NINJA:
 		{
-			// reset Hit objects
-			m_NumObjectsHit = 0;
+			if(m_pBall)
+			{
+				vec2 direction = normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
+				float velocity = g_Config.m_SvfbBallVelocity / 10.0f;
+				ThrowBall(direction * velocity);
+				GameServer()->SendGameMsg(GAMEMSG_CTF_DROP, -1);
+				DischargeWeapon(g_pData->m_Weapons.m_aId[m_ActiveWeapon].m_Firedelay);
+				return;
+			}
+			else
+			{
+				// reset Hit objects
+				m_NumObjectsHit = 0;
 
-			m_Ninja.m_ActivationDir = Direction;
-			m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * Server()->TickSpeed() / 1000;
-			m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
+				m_Ninja.m_ActivationDir = Direction;
+				m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * Server()->TickSpeed() / 1000;
+				m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
 
-			GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
+				GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
+			}
 		} break;
 
 	}
@@ -403,7 +430,7 @@ void CCharacter::FireWeapon()
 		m_aWeapons[m_ActiveWeapon].m_Ammo--;
 
 	if(!m_ReloadTimer)
-		m_ReloadTimer = g_pData->m_Weapons.m_aId[m_ActiveWeapon].m_Firedelay * Server()->TickSpeed() / 1000;
+		DischargeWeapon(g_pData->m_Weapons.m_aId[m_ActiveWeapon].m_Firedelay);
 }
 
 void CCharacter::HandleWeapons()
@@ -459,7 +486,12 @@ bool CCharacter::GiveWeapon(int Weapon, int Ammo)
 	return false;
 }
 
-void CCharacter::GiveNinja()
+void CCharacter::DischargeWeapon(int Milliseconds)
+{
+	m_ReloadTimer = Milliseconds * Server()->TickSpeed() / 1000;
+}
+
+void CCharacter::BecomeNinja()
 {
 	m_Ninja.m_ActivationTick = Server()->Tick();
 	m_Ninja.m_CurrentMoveTime = -1;
@@ -470,6 +502,25 @@ void CCharacter::GiveNinja()
 	m_ActiveWeapon = WEAPON_NINJA;
 
 	GameServer()->CreateSound(m_Pos, SOUND_PICKUP_NINJA);
+}
+
+void CCharacter::GiveNinja()
+{
+	BecomeNinja();
+	GameServer()->CreateSound(m_Pos, SOUND_PICKUP_NINJA);
+}
+
+void CCharacter::RevokeNinja()
+{
+	m_aWeapons[WEAPON_NINJA].m_Got = false;
+	m_ActiveWeapon = m_LastWeapon;
+	if(m_ActiveWeapon == WEAPON_NINJA)
+		m_ActiveWeapon = WEAPON_GUN;
+	SetWeapon(m_ActiveWeapon);
+
+	// reset velocity
+	if(m_Ninja.m_CurrentMoveTime > 0)
+		m_Core.m_Vel = m_Ninja.m_ActivationDir*m_Ninja.m_OldVelAmount;
 }
 
 void CCharacter::SetEmote(int Emote, int Tick)
@@ -536,6 +587,50 @@ void CCharacter::Tick()
 
 	// handle Weapons
 	HandleWeapons();
+
+	// direct pass of the ball
+	if(g_Config.m_SvfbDirectPass && m_pBall && (m_Core.m_TriggeredEvents & COREEVENTFLAG_HOOK_ATTACH_PLAYER) && m_Core.m_HookedPlayer != -1)
+	{
+		CCharacter *catcher = GameServer()->m_apPlayers[m_Core.m_HookedPlayer]->GetCharacter();
+		if (!catcher->m_pBall)
+		{
+			CBall *ball = m_pBall;
+			DropBall();
+			catcher->CaptureBall(ball);
+
+			// release hook
+			m_Core.m_HookedPlayer = -1;
+			m_Core.m_HookState = HOOK_RETRACTED;
+			m_Core.m_HookPos = m_Core.m_Pos;
+		}
+	}
+
+	// hook the flag
+	if(g_Config.m_SvfbHookBall && !m_pBall && (m_Core.m_HookState == HOOK_FLYING || m_Core.m_TriggeredEvents & (COREEVENTFLAG_HOOK_ATTACH_GROUND | COREEVENTFLAG_HOOK_HIT_NOHOOK)))
+	{
+		// find the nearest ball
+		CBall *ball = 0;
+		for(int i = 0; i < 2; ++i)
+		{
+			CBall *b = static_cast<CGameControllerFB *>(GameServer()->m_pController)->m_apBalls[i];
+			if(b && !b->GetCarrier())
+			{
+				static const vec2 offset(0, -38);
+				vec2 pos = b->GetPos() + offset;
+				vec2 point = closest_point_on_line(m_Core.m_Pos, m_Core.m_HookPos, pos);
+				if(distance(pos, point) < g_Config.m_SvfbBallRadius && (!ball || distance(m_Pos, pos) < distance(m_Pos, ball->GetPos())))
+					ball = b;
+			}
+		}
+		if(ball)
+		{
+			CaptureBall(ball);
+
+			// retract hook
+			m_Core.m_HookState = HOOK_RETRACTED;
+			m_Core.m_HookPos = m_Core.m_Pos;
+		}
+	}
 }
 
 void CCharacter::TickDefered()
@@ -686,6 +781,16 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 	if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From))
 		return false;
 
+	// do damage Hit sound
+	if(From >= 0 && From != m_pPlayer->GetCID() && GameServer()->m_apPlayers[From])
+		GameServer()->CreateSound(GameServer()->m_apPlayers[From]->m_ViewPos, SOUND_HIT, CmaskOne(From));
+
+	if (g_Config.m_SvfbInstagib && Weapon == WEAPON_LASER)
+	{
+		Die(From, Weapon);
+		return true;
+	}
+
 	// m_pPlayer only inflicts half damage on self
 	if(From == m_pPlayer->GetCID())
 		Dmg = max(1, Dmg/2);
@@ -749,6 +854,15 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 		}
 
 		return false;
+	}
+	else
+	{
+		// lose flag on every damage
+		if (m_pBall && g_Config.m_SvfbBallDamageLose)
+		{
+			DropBall();
+			GameServer()->SendGameMsg(GAMEMSG_CTF_DROP, -1);
+		}
 	}
 
 	if (Dmg > 2)

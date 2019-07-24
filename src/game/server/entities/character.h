@@ -51,12 +51,25 @@ public:
 	bool IncreaseArmor(int Amount);
 
 	bool GiveWeapon(int Weapon, int Ammo);
+
 	void GiveNinja();
+	void BecomeNinja();
+	void RevokeNinja();
+
+	void DischargeWeapon(int Milliseconds);
 
 	void SetEmote(int Emote, int Tick);
 
 	bool IsAlive() const { return m_Alive; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
+
+	class CBall *&Ball() { return m_pBall; }
+
+	void DropBall();
+
+	int m_GoalCampTick; // goal camping counter
+	int m_CampTick; // camping counter
+	vec2 m_CampPos;
 
 private:
 	// player controlling this character
@@ -121,6 +134,10 @@ private:
 	CCharacterCore m_SendCore; // core that we should send
 	CCharacterCore m_ReckoningCore; // the dead reckoning core
 
+	class CBall *m_pBall;
+
+	void ThrowBall(vec2 Velocity);
+	void CaptureBall(CBall *);
 };
 
 #endif

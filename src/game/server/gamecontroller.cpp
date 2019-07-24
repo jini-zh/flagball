@@ -10,6 +10,8 @@
 #include "gamecontroller.h"
 #include "player.h"
 
+#include "maprotation.h"
+
 
 IGameController::IGameController(CGameContext *pGameServer)
 {
@@ -953,58 +955,77 @@ void IGameController::CycleMap()
 	if(!str_length(g_Config.m_SvMaprotation))
 		return;
 
+	NextMap();
+}
+
+void IGameController::NextMap()
+{
 	// handle maprotation
 	const char *pMapRotation = g_Config.m_SvMaprotation;
 	const char *pCurrentMap = g_Config.m_SvMap;
 
-	int CurrentMapLen = str_length(pCurrentMap);
-	const char *pNextMap = pMapRotation;
-	while(*pNextMap)
+	const char *pNextMap;
+	char aBuf[512];
+
+	if(str_comp_num(pMapRotation, "!random ", 8) == 0)
 	{
-		int WordLen = 0;
-		while(pNextMap[WordLen] && !IsSeparator(pNextMap[WordLen]))
-			WordLen++;
-
-		if(WordLen == CurrentMapLen && str_comp_num(pNextMap, pCurrentMap, CurrentMapLen) == 0)
-		{
-			// map found
-			pNextMap += CurrentMapLen;
-			while(*pNextMap && IsSeparator(*pNextMap))
-				pNextMap++;
-
-			break;
-		}
-
-		pNextMap++;
+		// random rotation
+		static IMapRotation *rotation = RandomMapRotation();
+		pNextMap = rotation->NextMap(pMapRotation + 8, pCurrentMap);
 	}
-
-	// restart rotation
-	if(pNextMap[0] == 0)
+	else
+	{
+		// standard rotation
+		int CurrentMapLen = str_length(pCurrentMap);
 		pNextMap = pMapRotation;
-
-	// cut out the next map
-	char aBuf[512] = {0};
-	for(int i = 0; i < 511; i++)
-	{
-		aBuf[i] = pNextMap[i];
-		if(IsSeparator(pNextMap[i]) || pNextMap[i] == 0)
+		while(*pNextMap)
 		{
-			aBuf[i] = 0;
-			break;
-		}
-	}
+			int WordLen = 0;
+			while(pNextMap[WordLen] && !IsSeparator(pNextMap[WordLen]))
+				WordLen++;
 
-	// skip spaces
-	int i = 0;
-	while(IsSeparator(aBuf[i]))
-		i++;
+			if(WordLen == CurrentMapLen && str_comp_num(pNextMap, pCurrentMap, CurrentMapLen) == 0)
+			{
+				// map found
+				pNextMap += CurrentMapLen;
+				while(*pNextMap && IsSeparator(*pNextMap))
+					pNextMap++;
+
+				break;
+			}
+
+			pNextMap++;
+		}
+
+		// restart rotation
+		if(pNextMap[0] == 0)
+			pNextMap = pMapRotation;
+
+		// cut out the next map
+		for(int i = 0; i < 511; i++)
+		{
+			aBuf[i] = pNextMap[i];
+			if(IsSeparator(pNextMap[i]) || pNextMap[i] == 0)
+			{
+				aBuf[i] = 0;
+				break;
+			}
+		}
+
+		// skip spaces
+		int i = 0;
+		while(IsSeparator(aBuf[i]))
+			i++;
+
+		pNextMap = &aBuf[i];
+	}
 
 	m_MatchCount = 0;
 
 	char aBufMsg[256];
-	str_format(aBufMsg, sizeof(aBufMsg), "rotating map to %s", &aBuf[i]);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-	str_copy(g_Config.m_SvMap, &aBuf[i], sizeof(g_Config.m_SvMap));
+	str_format(aBufMsg, sizeof(aBufMsg), "rotating map to %s", pNextMap);
+	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", pNextMap);
+	str_copy(g_Config.m_SvMap, pNextMap, sizeof(g_Config.m_SvMap));
 }
 
 // spawn
@@ -1105,7 +1126,9 @@ bool IGameController::GetStartRespawnState() const
 			return true;
 	}
 	else
+	{
 		return false;
+	}
 }
 
 // team

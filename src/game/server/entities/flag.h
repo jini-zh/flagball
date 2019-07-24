@@ -32,6 +32,7 @@ public:
 	CCharacter *GetCarrier() const	{ return m_pCarrier; }
 	int GetGrabTick() const			{ return m_GrabTick; }
 	int GetDropTick() const			{ return m_DropTick; }
+	vec2& Vel() { return m_Vel; }
 
 	/* CEntity functions */
 	virtual void Reset();
@@ -42,6 +43,7 @@ public:
 	/* Functions */
 	void Grab(class CCharacter *pChar);
 	void Drop();
+	void Kick(vec2 Momentum);
 };
 
 #endif

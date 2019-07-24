@@ -12,6 +12,7 @@
 #include <game/version.h>
 
 #include "entities/character.h"
+#include "gamemodes/fb.h"
 #include "gamemodes/ctf.h"
 #include "gamemodes/dm.h"
 #include "gamemodes/lms.h"
@@ -185,6 +186,20 @@ void CGameContext::CreateSound(vec2 Pos, int Sound, int64 Mask)
 		pEvent->m_X = (int)Pos.x;
 		pEvent->m_Y = (int)Pos.y;
 		pEvent->m_SoundID = Sound;
+	}
+}
+
+void CGameContext::CreateSoundGlobal(int Sound, int64 Mask)
+{
+	for(int p = 0; p < MAX_CLIENTS; ++p)
+	{
+		int64 m = (int64)1 << p;
+		if(m & Mask && m_apPlayers[p])
+		{
+			CCharacter* ch = m_apPlayers[p]->GetCharacter();
+			if(ch)
+				CreateSound(ch->GetPos(), Sound, m);
+		}
 	}
 }
 
@@ -464,6 +479,7 @@ void CGameContext::SwapTeams()
 
 void CGameContext::OnTick()
 {
+
 	// check tuning
 	CheckPureTuning();
 
@@ -980,7 +996,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 			SendEmoticon(ClientID, pMsg->m_Emoticon);
 		}
-		else if (MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
+		else if (MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused && g_Config.m_SvfbSelfKill)
 		{
 			if(pPlayer->m_LastKill && pPlayer->m_LastKill+Server()->TickSpeed()*3 > Server()->Tick())
 				return;
@@ -1397,6 +1413,11 @@ void CGameContext::ConVote(IConsole::IResult *pResult, void *pUserData)
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 }
 
+void CGameContext::ConNextMap(IConsole::IResult *pResult, void *pUserData)
+{
+	((CGameContext *)pUserData)->m_pController->NextMap();
+}
+
 void CGameContext::ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
 	pfnCallback(pResult, pCallbackUserData);
@@ -1474,6 +1495,8 @@ void CGameContext::OnInit()
 	// select gametype
 	if(str_comp_nocase(g_Config.m_SvGametype, "mod") == 0)
 		m_pController = new CGameControllerMOD(this);
+	else if(str_comp_nocase(g_Config.m_SvGametype, "fb")  == 0)
+		m_pController = new CGameControllerFB(this);
 	else if(str_comp_nocase(g_Config.m_SvGametype, "ctf") == 0)
 		m_pController = new CGameControllerCTF(this);
 	else if(str_comp_nocase(g_Config.m_SvGametype, "lms") == 0)
@@ -1501,6 +1524,8 @@ void CGameContext::OnInit()
 			}
 		}
 	}
+
+	Console()->Register("next_map", "", CFGFLAG_SERVER, ConNextMap, this, "Switch to another random map");
 
 	Console()->Chain("sv_motd", ConchainSpecialMotdupdate, this);
 

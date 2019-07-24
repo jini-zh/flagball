@@ -7,6 +7,9 @@
 #include "gamecontroller.h"
 #include "player.h"
 
+#include <string.h>
+#include "gamemodes/fb.h"
+
 
 MACRO_ALLOC_POOL_ID_IMPL(CPlayer, MAX_CLIENTS)
 
@@ -33,6 +36,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, bool Dummy, bool AsSpe
 	m_RespawnDisabled = GameServer()->m_pController->GetStartRespawnState();
 	m_DeadSpecMode = false;
 	m_Spawning = 0;
+	m_NumOwngoals = 0;
+	m_OwngoalWarned = false;
 }
 
 CPlayer::~CPlayer()
@@ -438,6 +443,9 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 
 	// we got to wait 0.5 secs before respawning
 	m_RespawnTick = Server()->Tick()+Server()->TickSpeed()/2;
+
+	//update active player (idle kicking)
+	m_LastActionTick = Server()->Tick();
 
 	if(Team == TEAM_SPECTATORS)
 	{

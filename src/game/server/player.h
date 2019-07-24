@@ -95,6 +95,10 @@ public:
 
 	int m_InactivityTickCounter;
 
+	// flagball
+	int m_NumOwngoals;
+	bool m_OwngoalWarned;
+
 	struct
 	{
 		int m_TargetX;

@@ -1498,6 +1498,8 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamemodes/ctf.h
   gamemodes/dm.cpp
   gamemodes/dm.h
+  gamemodes/fb.cpp
+  gamemodes/fb.h
   gamemodes/lms.cpp
   gamemodes/lms.h
   gamemodes/lts.cpp
@@ -1508,6 +1510,8 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamemodes/tdm.h
   gameworld.cpp
   gameworld.h
+  maprotation.cpp
+  maprotation.h
   player.cpp
   player.h
 )

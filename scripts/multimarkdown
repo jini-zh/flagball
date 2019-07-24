@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+
+use Text::MultiMarkdown 'markdown';
+
+$m = Text::MultiMarkdown->new(
+ use_metadata => 1,
+ strip_metadata => 1
+);
+
+$body = $m->markdown(join '', <>);
+
+print <<END;
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+                 "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+END
+
+print "  <title>$_</title>\n" if $_ = $m->{'_metadata'}->{'title'};
+
+print <<END;
+ </head>
+ <body>
+$body
+ </body>
+</html>
+END
