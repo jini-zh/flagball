@@ -193,7 +193,6 @@ bool CGameControllerFB::HandleGoal (CBall *b, int goal)
 	const int team = p ? p->GetTeam() : b->m_LastCarrierTeam;
 	const bool own_goal = team == goal;
 	const bool tee_goal = b->GetCarrier();
-	int cid = p->GetCID();
 	
 	//	update scores
 	if (own_goal)
@@ -208,8 +207,8 @@ bool CGameControllerFB::HandleGoal (CBall *b, int goal)
 		
 			// send warning to user
 			char chat_msg[256];
-			str_format (chat_msg, sizeof (chat_msg), "!!! Hey %s, you scored an own-goal! Put the ball into the OTHER goal !!!", Server()->ClientName(cid));
-			GameServer()->SendChat(-1, CHAT_WHISPER, cid, chat_msg);
+			str_format (chat_msg, sizeof (chat_msg), "!!! Hey %s, you scored an own-goal! Put the ball into the OTHER goal !!!", Server()->ClientName(p->GetCID()));
+			GameServer()->SendChat(-1, CHAT_WHISPER, p->GetCID(), chat_msg);
 		}
 		// there's no sound like "wah...wah" ;)
 		GameServer()->CreateSoundGlobal(SOUND_NINJA_HIT); //SOUND_PLAYER_PAIN_LONG
@@ -231,11 +230,14 @@ bool CGameControllerFB::HandleGoal (CBall *b, int goal)
 	// Cut off long nicknames... the message would jut out on screen!
 	const int nick_length = 18;
 	char nick[64] = {0};
-	str_format (nick, sizeof (nick), "%s", p ? Server()->ClientName(cid) : "player left");
-	if (str_length (nick) > nick_length)
+	if (p)
 	{
-		nick[nick_length] = 0;
-		str_append (nick, "...", sizeof (nick));
+		str_format (nick, sizeof (nick), "%s", p ? Server()->ClientName(p->GetCID()) : "player left");
+		if (str_length (nick) > nick_length)
+		{
+			nick[nick_length] = 0;
+			str_append (nick, "...", sizeof (nick));
+		}
 	}
 
 	// Build broadcast-message
@@ -267,9 +269,9 @@ bool CGameControllerFB::HandleGoal (CBall *b, int goal)
 	{
 		char chat_msg[256];
 		str_format (chat_msg, sizeof (chat_msg), "%s was automatically kicked. Cause: Scored too many own-goals (%d).",
-			Server()->ClientName(cid), g_Config.m_SvfbOwngoalKick);
+			Server()->ClientName(p->GetCID()), g_Config.m_SvfbOwngoalKick);
 			
-		Server()->Kick(cid,
+		Server()->Kick(p->GetCID(),
 			"You scored too many own-goals! Please play the "
 			"game as it is supposed to be. Thank you!");
 		
