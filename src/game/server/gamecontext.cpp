@@ -1476,6 +1476,8 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("remove_vote", "s", CFGFLAG_SERVER, ConRemoveVote, this, "remove a voting option");
 	Console()->Register("clear_votes", "", CFGFLAG_SERVER, ConClearVotes, this, "Clears the voting options");
 	Console()->Register("vote", "r", CFGFLAG_SERVER, ConVote, this, "Force a vote to yes/no");
+	Console()->Register("next_map", "", CFGFLAG_SERVER, ConNextMap, this, "Switch to another random map");
+
 }
 
 void CGameContext::OnInit()
@@ -1524,8 +1526,6 @@ void CGameContext::OnInit()
 			}
 		}
 	}
-
-	Console()->Register("next_map", "", CFGFLAG_SERVER, ConNextMap, this, "Switch to another random map");
 
 	Console()->Chain("sv_motd", ConchainSpecialMotdupdate, this);
 
