@@ -68,8 +68,10 @@ void CBall::TickDefered()
 void CBall::Hit(CPlayer *Player, vec2 Direction)
 {
 	Kick(Direction * g_Config.m_SvfbLaserMomentum * 0.1f);
+#if 0 // disable changing the ball team on laser hit
 	m_pLastCarrier = Player;
 	m_LastCarrierTeam = Player->GetTeam();
+#endif
 
 	CBall* b = this;
 	static_cast<CGameControllerFB *>(GameServer()->m_pController)->SetBallColor(b, m_LastCarrierTeam);
