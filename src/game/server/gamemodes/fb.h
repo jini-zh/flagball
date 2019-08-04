@@ -46,6 +46,7 @@ public:
 	virtual bool HandleGoal (CBall *, int goal);
 	virtual void OnPlayerDisconnect (CPlayer *const p);
         virtual bool CanSpawn(int Team, vec2 *pOutPos);
+        bool DoWincheckMatch();
 };
 
 #endif

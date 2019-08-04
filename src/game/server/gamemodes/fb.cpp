@@ -276,6 +276,8 @@ bool CGameControllerFB::HandleGoal (CBall *b, int goal)
 		GameServer()->SendChat(-1, CHAT_ALL, -1, chat_msg);
 	}
 
+	DoWincheckMatch();
+
 	return true;
 	
 }
@@ -354,6 +356,7 @@ void CGameControllerFB::GrantBall(CCharacter *ch, CBall *b)
 	{
 		m_aTeamscore[team] += g_Config.m_SvfbScoreTeamStand;
 		ch->GetPlayer()->m_Score += g_Config.m_SvfbScorePlayerStand;
+		DoWincheckMatch();
 	}
 	if (g_Config.m_SvfbLaserMomentum) 
 		SetBallColor(b, team);
@@ -520,6 +523,34 @@ void CGameControllerFB::Tick()
 	}
 }
 
+
+bool CGameControllerFB::DoWincheckMatch()
+{
+	// check score win condition
+	if((m_GameInfo.m_ScoreLimit > 0 && (m_aTeamscore[TEAM_RED] >= m_GameInfo.m_ScoreLimit || m_aTeamscore[TEAM_BLUE] >= m_GameInfo.m_ScoreLimit)) ||
+		(m_GameInfo.m_TimeLimit > 0 && (Server()->Tick()-m_GameStartTick) >= m_GameInfo.m_TimeLimit*Server()->TickSpeed()*60))
+	{
+		if(m_SuddenDeath)
+		{
+			if(m_aTeamscore[TEAM_RED]/100 != m_aTeamscore[TEAM_BLUE]/100)
+			{
+				EndMatch();
+				return true;
+			}
+		}
+		else
+		{
+			if(m_aTeamscore[TEAM_RED] != m_aTeamscore[TEAM_BLUE])
+			{
+				EndMatch();
+				return true;
+			}
+			else
+				m_SuddenDeath = 1;
+		}
+	}
+	return false;
+}
 void CGameControllerFB::Snap(int SnappingClient)
 {
 	IGameController::Snap(SnappingClient);
