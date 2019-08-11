@@ -1,0 +1,21 @@
+0.3.0
+
+* The mod is ported to teeworlds-0.7.0.1
+
+* [gameplay change] When sv_fb_laser_momentum is set to nonzero value and a
+ball is shot at, it no longer changes the team it belongs to.  Previously a
+defender could shoot the ball to `own' it and, depending on sv_fb_owngoal
+value, either avoid the goal or risk making an own goal. Now the ball always
+belongs to the team that last touched it.
+
+* [gameplay change] The ball no longer changes colors (swaps with the inactive
+flag). This ability was lost during the porting, but might be restored in the
+future.
+
+* [enhancement] New configuration variable: sv_fb_ball_friction.
+
+* [deprecation] Configuration variables sv_fb_ball_offset_x and
+sv_fb_ball_offset_y were deprecated. The ball hookable center is fixed at (0,
+38) which corresponds to the visible center of the flag image.
+
+* [deprecation] Configuration variable sv_fb_welcome_message was deprecated.
