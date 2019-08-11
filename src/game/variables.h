@@ -135,7 +135,7 @@ MACRO_CONFIG_INT(SvVoteKickBantime, sv_vote_kick_bantime, 5, 0, 1440, CFGFLAG_SA
 /*	flagball	*/
 MACRO_CONFIG_INT(SvfbBallDamageLose, sv_fb_ball_damage_lose, 1, 0, 1, CFGFLAG_SERVER, "Lose ball on any damage")
 MACRO_CONFIG_INT(SvfbBallResetTime, sv_fb_ball_reset_time, 30, 1, 500, CFGFLAG_SERVER, "Number of seconds needed to reset a lying ball")
-MACRO_CONFIG_INT(SvfbBallVelocity, sv_fb_ball_velocity, 207, 10, 3000, CFGFLAG_SERVER, "Velocity of the ball after it got shot")
+MACRO_CONFIG_INT(SvfbBallVelocity, sv_fb_ball_velocity, 207, 10, 3000, CFGFLAG_SERVER, "Velocity of the ball after it was thrown")
 MACRO_CONFIG_INT(SvfbBallFriction, sv_fb_ball_friction, 550, -10000, 10000, CFGFLAG_SERVER, "The amount of horizontal velocity a ball loses while moving")
 MACRO_CONFIG_INT(SvfbCampMaxtime, sv_fb_camp_maxtime, 0, 0, 100, CFGFLAG_SERVER, "Number of seconds allowed lingering at the same place")
 MACRO_CONFIG_INT(SvfbCampThreshold, sv_fb_camp_threshold, 200, 64, 1000, CFGFLAG_SERVER, "Threshold for anti-camp distance")
