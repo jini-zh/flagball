@@ -1,3 +1,4 @@
+#include <cmath>
 #include <string.h>
 #include <engine/shared/config.h>
 #include <engine/server.h>
