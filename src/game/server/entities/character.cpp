@@ -588,6 +588,11 @@ void CCharacter::Tick()
 	// handle Weapons
 	HandleWeapons();
 
+	CGameControllerFB *Controller = dynamic_cast<CGameControllerFB *>(GameServer()->m_pController);
+	if(!Controller) return;
+
+	// flagball
+
 	// direct pass of the ball
 	if(g_Config.m_SvfbDirectPass && m_pBall && (m_Core.m_TriggeredEvents & COREEVENTFLAG_HOOK_ATTACH_PLAYER) && m_Core.m_HookedPlayer != -1)
 	{
@@ -612,7 +617,7 @@ void CCharacter::Tick()
 		CBall *ball = 0;
 		for(int i = 0; i < 2; ++i)
 		{
-			CBall *b = static_cast<CGameControllerFB *>(GameServer()->m_pController)->m_apBalls[i];
+			CBall *b = Controller->m_apBalls[i];
 			if(b && !b->GetCarrier())
 			{
 				static const vec2 offset(0, -38);
